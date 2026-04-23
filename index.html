@@ -1,0 +1,226 @@
+# ===== GIAO DIỆN WEB HTML =====
+HTML_CONTENT = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Image API</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --bg-color: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --text-light: #f8fafc;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+        }
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            color: var(--text-light);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 40px;
+            width: 100%;
+            max-width: 480px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            animation: fade-in 0.8s ease-out;
+        }
+        @keyframes fade-in {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        h1 {
+            font-size: 28px;
+            font-weight: 800;
+            margin-bottom: 8px;
+            background: linear-gradient(to right, #a855f7, #3b82f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        p.subtitle {
+            color: #94a3b8;
+            font-size: 14px;
+            margin-bottom: 30px;
+        }
+        .upload-area {
+            border: 2px dashed rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            padding: 30px 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        .upload-area:hover {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.05);
+        }
+        .upload-area input {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+        .upload-area p {
+            color: #cbd5e1;
+            font-weight: 600;
+            pointer-events: none;
+        }
+        .preview-img {
+            max-width: 100%;
+            max-height: 220px;
+            border-radius: 12px;
+            margin-top: 20px;
+            display: none;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+            object-fit: contain;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .btn-predict {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 14px 24px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 20px;
+            transition: transform 0.2s, background 0.3s;
+            box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.4);
+            display: none;
+        }
+        .btn-predict:hover {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+        }
+        .result-box {
+            margin-top: 24px;
+            padding: 16px;
+            border-radius: 12px;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            color: #10b981;
+            font-weight: 600;
+            font-size: 18px;
+            display: none;
+        }
+        .loader {
+            display: none;
+            border: 3px solid rgba(255,255,255,0.1);
+            border-top: 3px solid var(--primary);
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Khám Phá AI Mô Hình</h1>
+    <p class="subtitle">Upload hình ảnh của bạn để chia sẻ với bạn bè</p>
+
+    <form id="uploadForm">
+        <div class="upload-area" id="drop-zone">
+            <input type="file" id="fileInput" accept="image/*" required>
+            <p id="upload-text">Thả ảnh vào hoặc Nhấn để chọn file</p>
+        </div>
+        <img id="imagePreview" class="preview-img" alt="Bản xem trước">
+        <button type="submit" class="btn-predict" id="predictBtn">Nhận Dạng Bằng AI ✨</button>
+    </form>
+    
+    <div class="loader" id="loader"></div>
+    <div class="result-box" id="resultBox"></div>
+</div>
+
+<script>
+    const fileInput = document.getElementById('fileInput');
+    const imagePreview = document.getElementById('imagePreview');
+    const uploadText = document.getElementById('upload-text');
+    const predictBtn = document.getElementById('predictBtn');
+    const uploadForm = document.getElementById('uploadForm');
+    const resultBox = document.getElementById('resultBox');
+    const loader = document.getElementById('loader');
+
+    // Preview
+    fileInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                imagePreview.src = e.target.result;
+                imagePreview.style.display = 'block';
+                predictBtn.style.display = 'block';
+                resultBox.style.display = 'none';
+                uploadText.style.display = 'none';
+                document.getElementById('drop-zone').style.padding = '10px';
+            }
+            reader.readAsDataURL(file);
+        }
+    });
+
+    // Predict
+    uploadForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const file = fileInput.files[0];
+        if (!file) return;
+
+        predictBtn.style.display = 'none';
+        loader.style.display = 'block';
+        resultBox.style.display = 'none';
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const response = await fetch('/predict', { method: 'POST', body: formData });
+            if (!response.ok) throw new Error("Lỗi API kết nối!");
+            
+            const data = await response.json();
+            resultBox.innerHTML = `🌟 ${data.message} 🌟`;
+            resultBox.style.color = '#10b981';
+            resultBox.style.background = 'rgba(16, 185, 129, 0.1)';
+            resultBox.style.borderColor = 'rgba(16, 185, 129, 0.2)';
+            resultBox.style.display = 'block';
+        } catch (error) {
+            resultBox.innerHTML = `❌ Lỗi: ${error.message}`;
+            resultBox.style.color = '#ef4444';
+            resultBox.style.background = 'rgba(239, 68, 68, 0.1)';
+            resultBox.style.borderColor = 'rgba(239, 68, 68, 0.2)';
+            resultBox.style.display = 'block';
+        } finally {
+            loader.style.display = 'none';
+            predictBtn.style.display = 'block';
+        }
+    });
+</script>
+</body>
+</html>
+"""
+# ==============================
